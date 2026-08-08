@@ -1,0 +1,95 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 980 >>
+stream
+BT
+/F1 20 Tf
+72 740 Td
+(Acme Office Supplies) Tj
+0 -28 Td
+/F1 12 Tf
+(123 Industrial Park, Mumbai, Maharashtra 400001) Tj
+0 -16 Td
+(GSTIN: 27AAACA1234A1Z5) Tj
+0 -32 Td
+/F2 18 Tf
+(INVOICE) Tj
+0 -24 Td
+/F1 11 Tf
+(Invoice Number: INV-2026-00417) Tj
+0 -14 Td
+(Invoice Date: 2026-08-05) Tj
+0 -14 Td
+(Due Date: 2026-09-04) Tj
+0 -28 Td
+(FROM:) Tj
+0 -14 Td
+(Acme Office Supplies) Tj
+0 -14 Td
+(Billing: ap@acmeoffice.example) Tj
+0 -28 Td
+(TO:) Tj
+0 -14 Td
+(Northwind Traders Pvt Ltd) Tj
+0 -14 Td
+(5 Marine Drive, Mumbai, Maharashtra 400020) Tj
+0 -14 Td
+(GSTIN: 27AAACN5678B1Z3) Tj
+0 -36 Td
+/F2 12 Tf
+(ITEMS) Tj
+0 -18 Td
+/F1 11 Tf
+(1. A4 Printer Paper - 5 reams ......... 2500.00) Tj
+0 -14 Td
+(2. HP 305 Black Ink Cartridge - 2 units ......... 1800.00) Tj
+0 -14 Td
+(3. Whiteboard Markers - Box of 12 ......... 720.00) Tj
+0 -14 Td
+(4. Desk Organizer - 3 units ......... 1350.00) Tj
+0 -22 Td
+/F2 12 Tf
+(SUMMARY) Tj
+0 -16 Td
+/F1 11 Tf
+(Subtotal: 6370.00) Tj
+0 -14 Td
+(CGST 9%: 573.30) Tj
+0 -14 Td
+(SGST 9%: 573.30) Tj
+0 -14 Td
+(Total: 7516.60) Tj
+0 -14 Td
+(Currency: INR) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+xref
+0 7
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000109 00000 n
+0000000211 00000 n
+0000001244 00000 n
+0000001313 00000 n
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1381
+%%EOF

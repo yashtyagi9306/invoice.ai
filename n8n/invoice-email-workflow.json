@@ -1,0 +1,154 @@
+{
+  "name": "Invoice Email Automation",
+  "nodes": [
+    {
+      "id": "gmail-trigger",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [-200, 0],
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyMinute" }]
+        },
+        "simple": false,
+        "downloadAttachments": true,
+        "filters": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Invoice Mailbox"
+        }
+      }
+    },
+    {
+      "id": "filter-relevant-emails",
+      "name": "Filter: Subject + Attachment",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [40, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "combinator": "and" },
+          "conditions": [
+            {
+              "leftValue": "={{ /Invoice|Tax Invoice|Bill|Purchase Order|Receipt/i.test($json.subject) }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            },
+            {
+              "leftValue": "={{ Object.keys($binary || {}).length > 0 }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "split-attachments",
+      "name": "Split Attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const allowed = ['.pdf', '.png', '.jpg', '.jpeg'];\nconst output = [];\n\nfor (const item of items) {\n  const binaryKeys = Object.keys(item.binary || {});\n  for (const key of binaryKeys) {\n    const binary = item.binary[key];\n    const fileName = binary.fileName || '';\n    const ext = fileName.toLowerCase().slice(fileName.lastIndexOf('.'));\n    if (!allowed.includes(ext)) continue;\n\n    output.push({\n      json: {\n        sender: item.json.from?.value?.[0]?.address || item.json.from,\n        subject: item.json.subject,\n        received_at: item.json.date\n      },\n      binary: { data: binary }\n    });\n  }\n}\n\nreturn output;"
+      }
+    },
+    {
+      "id": "call-backend",
+      "name": "Call Backend API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/process-invoice",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-API-Key", "value": "={{ $env.BACKEND_API_KEY }}" }
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            { "name": "sender", "value": "={{ $json.sender }}" },
+            { "name": "subject", "value": "={{ $json.subject }}" },
+            { "name": "received_at", "value": "={{ $json.received_at }}" },
+            { "name": "file", "parameterType": "formBinaryData", "inputDataFieldName": "data" }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "retry": {
+            "retry": {
+              "maxTries": 3,
+              "waitBetweenTries": 5000
+            }
+          }
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "if-success",
+      "name": "IF: Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [760, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "combinator": "and" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "received",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "log-success",
+      "name": "Log: Invoice processed successfully",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1000, -100],
+      "parameters": {}
+    },
+    {
+      "id": "log-failure",
+      "name": "Log: Invoice processing failed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1000, 100],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [[{ "node": "Filter: Subject + Attachment", "type": "main", "index": 0 }]]
+    },
+    "Filter: Subject + Attachment": {
+      "main": [[{ "node": "Split Attachments", "type": "main", "index": 0 }]]
+    },
+    "Split Attachments": {
+      "main": [[{ "node": "Call Backend API", "type": "main", "index": 0 }]]
+    },
+    "Call Backend API": {
+      "main": [[{ "node": "IF: Success?", "type": "main", "index": 0 }]]
+    },
+    "IF: Success?": {
+      "main": [
+        [{ "node": "Log: Invoice processed successfully", "type": "main", "index": 0 }],
+        [{ "node": "Log: Invoice processing failed", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}
