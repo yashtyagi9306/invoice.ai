@@ -14,6 +14,9 @@ from backend.models.risk import RiskAssessment
 logger = logging.getLogger(__name__)
 
 OPENAI_MODEL = "gpt-4o-mini"
+# Groq exposes an OpenAI-compatible endpoint at api.groq.com/openai/v1
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+GROQ_DEFAULT_MODEL = "llama-3.1-8b-instant"  # fast 8B Llama, good for structured extraction
 OLLAMA_TIMEOUT_S = 180.0  # local 3B model can take 30-60s on first load
 MAX_RETRIES = 1
 
@@ -23,11 +26,36 @@ _OLLAMA_JSON_REMINDER = " Respond with a single JSON object only — no prose, n
 
 
 def _client() -> Optional[OpenAI]:
-    """Return an OpenAI client if OpenAI is configured, else None."""
+    """Return an OpenAI-compatible client based on `settings.llm_provider`.
+
+    Both OpenAI and Groq speak the same OpenAI SDK protocol; only the base URL
+    and API key differ. Ollama is not an OpenAI-compatible endpoint, so this
+    returns None when Ollama is selected — that path is handled separately by
+    `_call_ollama_json`.
+    """
     settings = get_settings()
-    if not settings.openai_api_key:
-        return None
-    return OpenAI(api_key=settings.openai_api_key, timeout=30.0, max_retries=0)
+    if settings.llm_provider == "groq":
+        if not settings.groq_api_key:
+            return None
+        return OpenAI(
+            api_key=settings.groq_api_key,
+            base_url=GROQ_BASE_URL,
+            timeout=30.0,
+            max_retries=0,
+        )
+    if settings.llm_provider == "openai":
+        if not settings.openai_api_key:
+            return None
+        return OpenAI(api_key=settings.openai_api_key, timeout=30.0, max_retries=0)
+    return None
+
+
+def _model_name() -> str:
+    """Return the model identifier to use with the OpenAI-compatible API."""
+    settings = get_settings()
+    if settings.llm_provider == "groq":
+        return settings.groq_model or GROQ_DEFAULT_MODEL
+    return OPENAI_MODEL
 
 
 def _strict_schema(model: type[BaseModel]) -> dict[str, Any]:
@@ -273,25 +301,59 @@ def _call_ollama_json(
 
 
 def _call_openai_json(prompt_messages: list[dict], schema: type[BaseModel], schema_name: str) -> str:
+    """Call an OpenAI-compatible chat API (OpenAI or Groq) with strict JSON
+    schema output and return the raw JSON text. Pydantic validation happens
+    in the caller.
+    """
+    settings = get_settings()
     client = _client()
     if client is None:
-        raise RuntimeError("OpenAI provider selected but OPENAI_API_KEY is not set")
+        raise RuntimeError(
+            f"{settings.llm_provider} provider selected but its API key is not set"
+        )
 
-    response = client.responses.create(
-        model=OPENAI_MODEL,
-        temperature=0,
-        input=prompt_messages,
-        text={
-            "format": {
-                "type": "json_schema",
-                "name": schema_name,
-                "schema": _strict_schema(schema),
-            }
-        },
+    if settings.llm_provider == "openai":
+        # OpenAI supports the strict Responses API with json_schema.
+        response = client.responses.create(
+            model=_model_name(),
+            temperature=0,
+            input=prompt_messages,
+            text={
+                "format": {
+                    "type": "json_schema",
+                    "name": schema_name,
+                    "schema": _strict_schema(schema),
+                }
+            },
+        )
+        if not response.output_text:
+            raise ValueError("Empty response from model")
+        return response.output_text
+
+    # Groq (and any other OpenAI-compatible API without the Responses API):
+    # use chat.completions with json_object response_format. Groq requires the word
+    # 'json' in messages when using response_format={"type": "json_object"}.
+    # We pass the strict JSON schema in the system message to guide extraction.
+    groq_messages = list(prompt_messages)
+    schema_str = json.dumps(_strict_schema(schema), indent=2)
+    groq_messages.append(
+        {
+            "role": "system",
+            "content": f"Respond ONLY with a valid JSON object adhering strictly to this JSON Schema:\n{schema_str}",
+        }
     )
-    if not response.output_text:
+
+    response = client.chat.completions.create(
+        model=_model_name(),
+        temperature=0,
+        messages=groq_messages,
+        response_format={"type": "json_object"},
+    )
+    content = response.choices[0].message.content
+    if not content:
         raise ValueError("Empty response from model")
-    return response.output_text
+    return content
+
 
 
 def _call_model(invoice_text: str) -> str:
@@ -340,12 +402,13 @@ def extract_invoice_data(invoice_text: str) -> InvoiceExtraction:
             logger.info("AI extraction validated successfully")
             return data
         except Exception as exc:  # noqa: BLE001 - bad JSON, schema mismatch, API/network errors
-            # One more try: small Ollama models often flatten the nested
-            # `FieldExtraction` shape; normalize then revalidate.
-            if raw is not None and "model_type" in str(exc):
+            # Models (Ollama or Groq) may return flat or slightly drifted schema shapes;
+            # normalize then revalidate.
+            if raw is not None:
                 try:
                     flat = json.loads(raw)
                     normalized = _normalize_flat_invoice(flat)
+
                     # If the model returned no line items, fall back to a
                     # regex pass over the original text — small models are
                     # too unreliable for nested arrays.

@@ -21,3 +21,6 @@ dist/
 
 # VS Code
 .vscode/
+
+# Temporary uploads
+backend/uploads/

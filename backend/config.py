@@ -14,11 +14,14 @@ _BACKEND_DIR = Path(__file__).resolve().parent
 class Settings(BaseSettings):
     supabase_url: str
     supabase_key: str
-    # LLM provider switch — "ollama" (default, runs locally) or "openai"
+    # LLM provider switch — "ollama" (local), "groq" (free cloud), or "openai" (paid)
     llm_provider: str = "ollama"
-    # OpenAI fields are optional because Ollama users won't have a key
+    # OpenAI is optional (only used when LLM_PROVIDER=openai)
     openai_api_key: Optional[str] = None
-    # Ollama fields
+    # Groq is optional (only used when LLM_PROVIDER=groq). Free tier at console.groq.com
+    groq_api_key: Optional[str] = None
+    groq_model: str = "llama-3.1-8b-instant"
+    # Ollama is optional (only used when LLM_PROVIDER=ollama)
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "llama3.2:3b"
     high_value_threshold: float = 100000
