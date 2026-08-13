@@ -56,8 +56,9 @@ async def process_invoice(
                 saved = create_invoice(record)
                 invoice_id = saved["id"]
             except Exception as exc:  # noqa: BLE001
-                logger.warning("Risk scoring or persistence failed: %s", type(exc).__name__)
-                ai_error = "Risk scoring or storage failed"
+                logger.error("Risk scoring or persistence failed", exc_info=True)
+                ai_error = f"Risk scoring or storage failed: {exc}"
+
     else:
         logger.info("Skipping AI stage - document extraction status: %s", document.extraction_status)
 
