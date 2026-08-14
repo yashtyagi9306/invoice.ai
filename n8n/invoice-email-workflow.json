@@ -65,15 +65,10 @@
       "position": [520, 0],
       "parameters": {
         "method": "POST",
-        "url": "={{ ($vars.BACKEND_URL || $env.BACKEND_URL || '').replace(/\\/+$/, '') }}/process-invoice",
+        "url": "https://invoice-ai-backend-d9cz.onrender.com/process-invoice",
         "sendBody": true,
         "contentType": "multipart-form-data",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "X-API-Key", "value": "={{ $vars.BACKEND_API_KEY || $env.BACKEND_API_KEY || '' }}" }
-          ]
-        },
+        "sendHeaders": false,
         "bodyParameters": {
           "parameters": [
             { "name": "sender", "value": "={{ $json.sender }}" },
@@ -150,5 +145,6 @@
       ]
     }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": { "executionOrder": "v1" },
+  "active": true
 }
