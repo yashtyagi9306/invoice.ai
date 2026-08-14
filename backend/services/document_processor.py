@@ -68,9 +68,7 @@ def _process_pdf(path: Path, start: float) -> ExtractionResult:
         warnings.append(f"Direct extraction failed: {exc}")
         text, page_count = "", 0
 
-    avg_chars = len(text) / page_count if page_count else 0
-
-    if page_count and avg_chars >= MIN_CHARS_PER_PAGE:
+    if text.strip():
         logger.info("Text extraction method: direct")
         return ExtractionResult(
             document_type=DocumentType.PDF,
