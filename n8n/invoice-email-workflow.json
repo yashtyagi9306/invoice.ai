@@ -65,13 +65,13 @@
       "position": [520, 0],
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.BACKEND_URL }}/process-invoice",
+        "url": "={{ ($vars.BACKEND_URL || $env.BACKEND_URL || '').replace(/\\/+$/, '') }}/process-invoice",
         "sendBody": true,
         "contentType": "multipart-form-data",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "X-API-Key", "value": "={{ $env.BACKEND_API_KEY }}" }
+            { "name": "X-API-Key", "value": "={{ $vars.BACKEND_API_KEY || $env.BACKEND_API_KEY || '' }}" }
           ]
         },
         "bodyParameters": {
