@@ -42,8 +42,8 @@ async def process_invoice(
             extraction = extract_invoice_data(document.extracted_text)
             invoice_data = extraction.model_dump()
         except Exception as exc:  # noqa: BLE001
-            logger.warning("AI extraction failed: %s", type(exc).__name__)
-            ai_error = "AI extraction failed"
+            logger.error("AI extraction failed", exc_info=True)
+            ai_error = f"AI extraction failed: {exc}"
 
         if extraction is not None:
             try:

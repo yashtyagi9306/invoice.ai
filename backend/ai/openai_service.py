@@ -11,6 +11,8 @@ from backend.config import get_settings
 from backend.models.extraction import InvoiceExtraction
 from backend.models.risk import RiskAssessment
 
+import time
+
 logger = logging.getLogger(__name__)
 
 OPENAI_MODEL = "gpt-4o-mini"
@@ -18,7 +20,8 @@ OPENAI_MODEL = "gpt-4o-mini"
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 GROQ_DEFAULT_MODEL = "llama-3.1-8b-instant"  # fast 8B Llama, good for structured extraction
 OLLAMA_TIMEOUT_S = 180.0  # local 3B model can take 30-60s on first load
-MAX_RETRIES = 1
+MAX_RETRIES = 2
+
 
 # Small reminder appended to Ollama prompts; small local models occasionally
 # add prose around JSON, so this nudges them back on track.
@@ -429,10 +432,12 @@ def extract_invoice_data(invoice_text: str) -> InvoiceExtraction:
                     )
             last_error = exc
             logger.warning(
-                "AI extraction failed on attempt %s: %s",
+                "AI extraction failed on attempt %s: %s. Retrying in %ss...",
                 attempt + 1,
                 type(exc).__name__,
+                2.0 * (attempt + 1),
             )
+            time.sleep(2.0 * (attempt + 1))
 
     raise RuntimeError("AI extraction failed after retry") from last_error
 
